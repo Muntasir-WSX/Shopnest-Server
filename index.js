@@ -31,16 +31,32 @@ async function run() {
   try {
    
     const db = client.db("Shopnest"); 
-    const testimonialCollection = db.collection("testimonials"); 
+    const testimonialCollection = db.collection("testimonials");
+    const blogCollection = db.collection("blogs");
 
     // ----------------------------------------------ALL Routes------------------------------------------------
 
-    // GET Route
+    // GET Route of testimonials
     app.get('/testimonials', async (req, res) => {
       const cursor = testimonialCollection.find();
       const result = await cursor.toArray();
       res.send(result);
     });
+
+    // get routes of blogs
+    app.get('/blogs', async (req, res) => {
+  const result = await client.db("Shopnest").collection("blogs").find().toArray();
+  res.send(result);
+});
+
+// Newsletter msg
+
+app.post('/messages', async (req, res) => {
+  const newMessage = req.body;
+  const result = await client.db("Shopnest").collection("messages").insertOne(newMessage);
+  res.send(result);
+});
+
 
 
     // -----------------------------------------------ALL Routes------------------------------------------------
