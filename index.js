@@ -138,13 +138,69 @@ async function run() {
 
     // carts
 
-    app.post("/carts", async (req, res) => {
+   app.post("/carts", async (req, res) => {
       const item = req.body;
       try {
-        const result = await cartCollection.insertOne(item);
+        const query = { 
+          userEmail: item.userEmail, 
+          productId: item.productId 
+        };
+        
+        const existingItem = await cartCollection.findOne(query);
+
+        if (existingItem) {
+          const updateDoc = {
+            $inc: { quantity: item.quantity || 1 }
+          };
+          const result = await cartCollection.updateOne(query, updateDoc);
+          res.send(result);
+        } else {
+          const result = await cartCollection.insertOne(item);
+          res.send(result);
+        }
+      } catch (error) {
+        res.status(500).send({ message: "Error processing cart item", error });
+      }
+    });
+
+    // 2. get cart of individual user mail
+    app.get("/carts/:email", async (req, res) => {
+      try {
+        const email = req.params.email;
+        const query = { userEmail: email };
+        const result = await cartCollection.find(query).toArray();
         res.send(result);
       } catch (error) {
-        res.status(500).send({ message: "Error adding to cart", error });
+        res.status(500).send({ message: "Error fetching cart items", error });
+      }
+    });
+
+    // 3. delete item from cart
+    app.delete("/carts/:id", async (req, res) => {
+      try {
+        const id = req.params.id;
+        const query = { _id: new ObjectId(id) };
+        const result = await cartCollection.deleteOne(query);
+        res.send(result);
+      } catch (error) {
+        res.status(500).send({ message: "Error deleting cart item", error });
+      }
+    });
+
+    // 4. quantity plus minus in cart (Patch Route)
+    app.patch("/carts/:id", async (req, res) => {
+      const id = req.params.id;
+      const { action } = req.body;
+      try {
+        const query = { _id: new ObjectId(id) };
+        const amount = action === 'increase' ? 1 : -1;
+        
+        const result = await cartCollection.updateOne(query, {
+          $inc: { quantity: amount }
+        });
+        res.send(result);
+      } catch (error) {
+        res.status(500).send({ message: "Error updating quantity", error });
       }
     });
 
