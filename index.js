@@ -31,6 +31,7 @@ async function run() {
     const blogCollection = db.collection("blogs");
     const productCollection = db.collection("products");
     const wishlistCollection = db.collection("wishlist");
+    const cartCollection = db.collection("carts");
 
     // ----------------------------------------------ALL Routes------------------------------------------------
 
@@ -97,6 +98,48 @@ app.get('/products', async (req, res) => {
         res.status(500).send({ message: "Product not found", error });
       }
     });
+
+    /// stock products state
+    app.patch('/products/update-stock/:id', async (req, res) => {
+    const { id } = req.params;
+    const { orderQuantity } = req.body;
+
+    try {
+        // avaible stock
+        const product = await productsCollection.findOne({ _id: new ObjectId(id) });
+        
+        if (!product || product.quantity < orderQuantity) {
+            return res.status(400).send({ message: "Insufficient stock!" });
+        }
+
+        // 2. Stock Update
+        const result = await productsCollection.updateOne(
+            { _id: new ObjectId(id) },
+            { 
+                $inc: { quantity: -orderQuantity }, 
+                $set: { 
+                    stockStatus: (product.quantity - orderQuantity === 0) ? "out-of-stock" : "in-stock" 
+                }
+            }
+        );
+
+        res.send({ message: "Stock updated successfully!", result });
+    } catch (error) {
+        res.status(500).send(error);
+    }
+});
+
+    // carts
+
+    app.post('/carts', async (req, res) => {
+    const item = req.body;
+    try {
+        const result = await cartCollection.insertOne(item);
+        res.send(result);
+    } catch (error) {
+        res.status(500).send({ message: "Error adding to cart", error });
+    }
+});
 
     // get all wishlist
     app.get('/wishlist/:email', async (req, res) => {
