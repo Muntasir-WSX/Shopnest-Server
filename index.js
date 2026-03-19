@@ -267,12 +267,16 @@ app.patch("/products/update-stock/:id", async (req, res) => {
 
     // Wishlist item delete route
 
-    app.delete("/wishlist/:id", async (req, res) => {
-      const id = req.params.id;
-      const query = { _id: new ObjectId(id) };
-      const result = await wishlistCollection.deleteOne(query);
-      res.send(result);
-    });
+   app.delete("/wishlist/:id", async (req, res) => {
+  const id = req.params.id;
+  try {
+    const query = { _id: new ObjectId(id) };
+    const result = await wishlistCollection.deleteOne(query);
+    res.send(result);
+  } catch (error) {
+    res.status(500).send({ message: "Invalid ID format" });
+  }
+});
 
     // -----------------------------------------------ALL Routes------------------------------------------------
   } finally {
