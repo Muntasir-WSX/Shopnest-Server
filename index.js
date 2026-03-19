@@ -16,6 +16,24 @@ const client = new MongoClient(uri, {
   },
 });
 
+
+
+// SSLZ:Store ID: munta69bc3bd4b2259
+// Store Password (API/Secret Key): munta69bc3bd4b2259@ssl
+
+
+// Merchant Panel URL: https://sandbox.sslcommerz.com/manage/ (Credential as you inputted in the time of registration)
+
+
+ 
+// Store name: testmunta44ys
+// Registered URL: www.muntasirwsx.com
+// Session API to generate transaction: https://sandbox.sslcommerz.com/gwprocess/v4/api.php
+// Validation API: https://sandbox.sslcommerz.com/validator/api/validationserverAPI.php
+// Validation API (Web Service) name: https://sandbox.sslcommerz.com/validator/api/validationserverAPI.php
+ 
+// You may check our plugins available for multiple carts and libraries: https://github.com/sslcommerz
+
 // Middleware
 app.use(cors());
 app.use(express.json());
