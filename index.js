@@ -4,6 +4,7 @@ const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 require("dotenv").config();
 const app = express();
 const port = process.env.PORT || 5000;
+const SSLCommerzPayment = require('sslcommerz-lts');
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@simple-crud-server.a0arf8b.mongodb.net/?appName=simple-crud-server`;
 
@@ -17,23 +18,6 @@ const client = new MongoClient(uri, {
 });
 
 
-
-// SSLZ:Store ID: munta69bc3bd4b2259
-// Store Password (API/Secret Key): munta69bc3bd4b2259@ssl
-
-
-// Merchant Panel URL: https://sandbox.sslcommerz.com/manage/ (Credential as you inputted in the time of registration)
-
-
- 
-// Store name: testmunta44ys
-// Registered URL: www.muntasirwsx.com
-// Session API to generate transaction: https://sandbox.sslcommerz.com/gwprocess/v4/api.php
-// Validation API: https://sandbox.sslcommerz.com/validator/api/validationserverAPI.php
-// Validation API (Web Service) name: https://sandbox.sslcommerz.com/validator/api/validationserverAPI.php
- 
-// You may check our plugins available for multiple carts and libraries: https://github.com/sslcommerz
-
 // Middleware
 app.use(cors());
 app.use(express.json());
@@ -46,6 +30,11 @@ async function run() {
     const productCollection = db.collection("products");
     const wishlistCollection = db.collection("wishlist");
     const cartCollection = db.collection("carts");
+    const orderCollection = db.collection("orders");
+
+    const store_id = process.env.SSL_STORE_ID;
+    const store_passwd = process.env.SSL_STORE_PASS;
+    const is_live = false;
 
     // ----------------------------------------------ALL Routes------------------------------------------------
 
@@ -244,6 +233,21 @@ app.patch("/products/update-stock/:id", async (req, res) => {
     res.status(500).send({ message: "Invalid ID format or server error" });
   }
 });
+
+
+/// Cart Clear:
+
+app.delete("/carts/clear/:email", async (req, res) => {
+  try {
+    const email = req.params.email;
+    const query = { userEmail: email };
+    const result = await cartCollection.deleteMany(query); 
+    res.send(result);
+  } catch (error) {
+    res.status(500).send({ message: "Error clearing cart", error });
+  }
+});
+
     // get all wishlist
     app.get("/wishlist/:email", async (req, res) => {
       try {
@@ -295,6 +299,87 @@ app.patch("/products/update-stock/:id", async (req, res) => {
     res.status(500).send({ message: "Invalid ID format" });
   }
 });
+
+
+
+
+
+//////////// Payment Initiate
+
+app.post("/order", async (req, res) => {
+    const order = req.body;
+    const transactionId = new ObjectId().toString(); 
+
+    const data = {
+        total_amount: order.totalAmount,
+        currency: 'BDT',
+        tran_id: transactionId, 
+        success_url: `http://localhost:5000/payment/success/${transactionId}`,
+        fail_url: `http://localhost:5000/payment/fail/${transactionId}`,
+        cancel_url: `http://localhost:5000/payment/cancel`,
+        ipn_url: `http://localhost:5000/ipn`,
+        shipping_method: 'Courier',
+        product_name: 'Shopnest Products',
+        product_category: 'Electronic',
+        product_profile: 'general',
+        cus_name: `${order.firstName} ${order.lastName}`,
+        cus_email: order.email,
+        cus_add1: order.address,
+        cus_city: order.area,
+        cus_postcode: '4000',
+        cus_country: 'Bangladesh',
+        cus_phone: order.phone,
+        ship_name: order.firstName,
+        ship_add1: order.address,
+        ship_city: order.area,
+        ship_state: order.area,
+        ship_postcode: '4000',
+        ship_country: 'Bangladesh',
+    };
+
+    const sslcz = new SSLCommerzPayment(store_id, store_passwd, is_live);
+    sslcz.init(data).then(apiResponse => {
+        let GatewayPageURL = apiResponse.GatewayPageURL;
+        
+        // payment save in dB
+        const finalOrder = {
+            ...order,
+            paidStatus: false,
+            transactionId,
+        };
+        orderCollection.insertOne(finalOrder);
+
+        res.send({ url: GatewayPageURL });
+    });
+});
+
+// 3. If Payment Success 
+// আপনার বর্তমান কোডেই এই অংশটি চেক করুন
+app.post("/payment/success/:tranId", async (req, res) => {
+    try {
+        const result = await orderCollection.updateOne(
+            { transactionId: req.params.tranId },
+            {
+                $set: {
+                    paidStatus: true,
+                },
+            }
+        );
+
+        // ডাটাবেজ আপডেট হোক বা না হোক (যদি আগে থেকেই হয়ে থাকে), ইউজারকে ফ্রন্টএন্ডে পাঠিয়ে দিন
+        res.redirect(`http://localhost:5173/payment/success/${req.params.tranId}`);
+    } catch (error) {
+        console.error(error);
+        res.redirect(`http://localhost:5173/payment/fail`);
+    }
+});
+
+// পেমেন্ট ফেইল করলে ইউজার কোথায় যাবে
+app.post("/payment/fail/:tranId", async (req, res) => {
+    const result = await orderCollection.deleteOne({ transactionId: req.params.tranId });
+    res.redirect(`http://localhost:5173/payment/fail`);
+});
+
 
     // -----------------------------------------------ALL Routes------------------------------------------------
   } finally {
