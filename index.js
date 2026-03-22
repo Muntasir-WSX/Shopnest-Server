@@ -402,6 +402,34 @@ app.get("/orders/track/:tranId", async (req, res) => {
 });
 
 
+/// user seeing order from my-orders
+
+app.get("/orders/user/:email", async (req, res) => {
+    try {
+        const email = req.params.email;
+        const query = { email: email }; 
+        const result = await orderCollection.find(query).sort({ orderDate: -1 }).toArray();
+        res.send(result);
+    } catch (error) {
+        res.status(500).send({ message: "Error fetching user orders", error });
+    }
+});
+
+// usert canclelling orders
+
+app.patch("/orders/cancel/:id", async (req, res) => {
+    const id = req.params.id;
+    const filter = { _id: new ObjectId(id) };
+    const updateDoc = {
+        $set: {
+            status: "Cancelled"
+        },
+    };
+    const result = await orderCollection.updateOne(filter, updateDoc);
+    res.send(result);
+});
+
+
     // -----------------------------------------------ALL Routes------------------------------------------------
   } finally {
   }
