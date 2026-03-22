@@ -344,7 +344,10 @@ app.post("/order", async (req, res) => {
         // payment save in dB
         const finalOrder = {
             ...order,
+            cartItems: order.cartItems,
             paidStatus: false,
+            status: 'Pending', 
+    orderDate: new Date(),
             transactionId,
         };
         orderCollection.insertOne(finalOrder);
@@ -354,7 +357,6 @@ app.post("/order", async (req, res) => {
 });
 
 // 3. If Payment Success 
-// আপনার বর্তমান কোডেই এই অংশটি চেক করুন
 app.post("/payment/success/:tranId", async (req, res) => {
     try {
         const result = await orderCollection.updateOne(
@@ -365,8 +367,6 @@ app.post("/payment/success/:tranId", async (req, res) => {
                 },
             }
         );
-
-        // ডাটাবেজ আপডেট হোক বা না হোক (যদি আগে থেকেই হয়ে থাকে), ইউজারকে ফ্রন্টএন্ডে পাঠিয়ে দিন
         res.redirect(`http://localhost:5173/payment/success/${req.params.tranId}`);
     } catch (error) {
         console.error(error);
@@ -374,10 +374,19 @@ app.post("/payment/success/:tranId", async (req, res) => {
     }
 });
 
-// পেমেন্ট ফেইল করলে ইউজার কোথায় যাবে
 app.post("/payment/fail/:tranId", async (req, res) => {
     const result = await orderCollection.deleteOne({ transactionId: req.params.tranId });
     res.redirect(`http://localhost:5173/payment/fail`);
+});
+
+// Order Tracking API
+
+app.get("/orders/track/:tranId", async (req, res) => {
+    const result = await orderCollection.findOne({ transactionId: req.params.tranId });
+    if (!result) {
+        return res.status(404).send({ message: "Order not found" });
+    }
+    res.send(result);
 });
 
 
