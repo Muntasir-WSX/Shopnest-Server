@@ -5,9 +5,7 @@ require("dotenv").config();
 const app = express();
 const port = process.env.PORT || 5000;
 const SSLCommerzPayment = require('sslcommerz-lts');
-
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@simple-crud-server.a0arf8b.mongodb.net/?appName=simple-crud-server`;
-
 // MongoDB Client
 const client = new MongoClient(uri, {
   serverApi: {
@@ -16,8 +14,6 @@ const client = new MongoClient(uri, {
     deprecationErrors: true,
   },
 });
-
-
 // Middleware
 app.use(cors());
 app.use(express.json());
@@ -31,6 +27,7 @@ async function run() {
     const wishlistCollection = db.collection("wishlist");
     const cartCollection = db.collection("carts");
     const orderCollection = db.collection("orders");
+    const userCollection = db.collection("users");
 
     const store_id = process.env.SSL_STORE_ID;
     const store_passwd = process.env.SSL_STORE_PASS;
@@ -80,6 +77,26 @@ async function run() {
         .insertOne(newMessage);
       res.send(result);
     });
+
+    // Update or Create User info
+app.put("/users/:email", async (req, res) => {
+    const email = req.params.email;
+    const user = req.body;
+    const query = { email: email };
+    const options = { upsert: true }; 
+    const updateDoc = {
+        $set: user,
+    };
+    const result = await userCollection.updateOne(query, updateDoc, options);
+    res.send(result);
+});
+
+// get user data
+app.get("/users/:email", async (req, res) => {
+    const email = req.params.email;
+    const result = await userCollection.findOne({ email: email });
+    res.send(result);
+});
 
     // all about products
 
@@ -299,11 +316,6 @@ app.delete("/carts/clear/:email", async (req, res) => {
     res.status(500).send({ message: "Invalid ID format" });
   }
 });
-
-
-
-
-
 //////////// Payment Initiate
 
 app.post("/order", async (req, res) => {
