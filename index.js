@@ -35,6 +35,19 @@ async function run() {
 
     // ----------------------------------------------ALL Routes------------------------------------------------
 
+    // admin route
+
+   app.get("/users/admin/:email", async (req, res) => {
+    const email = req.params.email;
+    const user = await userCollection.findOne({ email: email });
+    let admin = false;
+    if (user) {
+        admin = user?.role === "admin"; 
+    }
+    res.send({ admin });
+    });
+
+    
     // GET Route of testimonials
     app.get("/testimonials", async (req, res) => {
       const cursor = testimonialCollection.find();
