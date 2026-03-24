@@ -18,6 +18,23 @@ const client = new MongoClient(uri, {
 app.use(cors());
 app.use(express.json());
 
+
+const jwt = require('jsonwebtoken');
+
+const verifyToken = (req, res, next) => {
+    if (!req.headers.authorization) {
+        return res.status(401).send({ message: 'unauthorized access' });
+    }
+    const token = req.headers.authorization.split(' ')[1];
+    jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+        if (err) {
+            return res.status(401).send({ message: 'unauthorized access' });
+        }
+        req.decoded = decoded;
+        next();
+    });
+};
+
 async function run() {
   try {
     const db = client.db("Shopnest");
@@ -34,6 +51,26 @@ async function run() {
     const is_live = false;
 
     // ----------------------------------------------ALL Routes------------------------------------------------
+  
+const verifyAdmin = async (req, res, next) => {
+    const email = req.decoded.email;
+    const query = { email: email };
+    const user = await userCollection.findOne(query);
+    const isAdmin = user?.role === 'admin';
+    if (!isAdmin) {
+        return res.status(403).send({ message: 'forbidden access' });
+    }
+    next();
+};
+
+app.post('/jwt', async (req, res) => {
+    const user = req.body;
+    const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' });
+    res.send({ token });
+});
+
+
+
 
     // admin route
 
@@ -47,7 +84,43 @@ async function run() {
     res.send({ admin });
     });
 
-    
+    /// ADMIN CONTROLS ROUTES
+
+    // control all user
+app.get("/users", verifyToken, verifyAdmin, async (req, res) => {
+    const result = await userCollection.find().toArray();
+    res.send(result);
+});
+
+// make user moderator-(cant delete first admin)
+app.patch("/users/admin/:id", verifyToken, verifyAdmin, async (req, res) => {
+    const id = req.params.id;
+    const filter = { _id: new ObjectId(id) };
+    const updateDoc = {
+        $set: { role: "admin" },
+    };
+    const result = await userCollection.updateOne(filter, updateDoc);
+    res.send(result);
+});
+
+// Admin chech so that can't delete himself
+app.patch("/users/admin/:id", verifyToken, verifyAdmin, async (req, res) => {
+    const id = req.params.id;
+    const requesterEmail = req.decoded.email; 
+    const filter = { _id: new ObjectId(id) };
+    const result = await userCollection.updateOne(filter, { $set: { role: "admin" } });
+    res.send(result);
+});
+
+// product add/delete
+app.delete("/products/:id", verifyToken, verifyAdmin, async (req, res) => {
+    const id = req.params.id;
+    const query = { _id: new ObjectId(id) };
+    const result = await productCollection.deleteOne(query);
+    res.send(result);
+});
+
+
     // GET Route of testimonials
     app.get("/testimonials", async (req, res) => {
       const cursor = testimonialCollection.find();
