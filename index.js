@@ -74,6 +74,8 @@ app.post('/jwt', async (req, res) => {
 
     // admin route
 
+
+ // check if admin
    app.get("/users/admin/:email", async (req, res) => {
     const email = req.params.email;
     const user = await userCollection.findOne({ email: email });
@@ -97,13 +99,15 @@ app.patch("/users/admin/:id", verifyToken, verifyAdmin, async (req, res) => {
     const id = req.params.id;
     const filter = { _id: new ObjectId(id) };
     const updateDoc = {
-        $set: { role: "admin" },
+        $set: { 
+          role: "admin" 
+        },
     };
     const result = await userCollection.updateOne(filter, updateDoc);
     res.send(result);
 });
 
-// Admin chech so that can't delete himself
+// Admin check so that can't delete himself
 app.patch("/users/admin/:id", verifyToken, verifyAdmin, async (req, res) => {
     const id = req.params.id;
     const requesterEmail = req.decoded.email; 
@@ -166,16 +170,21 @@ app.delete("/products/:id", verifyToken, verifyAdmin, async (req, res) => {
 
     // Update or Create User info
 app.put("/users/:email", async (req, res) => {
-    const email = req.params.email;
-    const user = req.body;
-    const query = { email: email };
-    const options = { upsert: true }; 
-    const updateDoc = {
-        $set: user,
-    };
-    const result = await userCollection.updateOne(query, updateDoc, options);
-    res.send(result);
-});
+            const email = req.params.email;
+            const user = req.body;
+            const query = { email: email };
+            const existingUser = await userCollection.findOne(query);
+            
+            const options = { upsert: true };
+            const updateDoc = {
+                $set: {
+                    ...user,
+                    role: existingUser?.role ? existingUser.role : 'user'
+                },
+            };
+            const result = await userCollection.updateOne(query, updateDoc, options);
+            res.send(result);
+        });
 
 // get user data
 app.get("/users/:email", async (req, res) => {
