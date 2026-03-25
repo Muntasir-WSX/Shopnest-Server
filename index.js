@@ -116,11 +116,38 @@ app.patch("/users/admin/:id", verifyToken, verifyAdmin, async (req, res) => {
     res.send(result);
 });
 
-// product add/delete
+// product delete
 app.delete("/products/:id", verifyToken, verifyAdmin, async (req, res) => {
     const id = req.params.id;
     const query = { _id: new ObjectId(id) };
     const result = await productCollection.deleteOne(query);
+    res.send(result);
+});
+
+// get all products with pagination
+app.get("/admin/products", verifyToken, verifyAdmin, async (req, res) => {
+    const page = parseInt(req.query.page) || 0;
+    const size = parseInt(req.query.size) || 10;
+    
+    const cursor = productCollection.find();
+    const total = await productCollection.countDocuments();
+    const result = await cursor.skip(page * size).limit(size).toArray();
+    
+    res.send({ result, total });
+});
+
+// updating stock
+app.patch("/admin/products/add-stock/:id", verifyToken, verifyAdmin, async (req, res) => {
+    const id = req.params.id;
+    const { newQuantity } = req.body; 
+
+    const filter = { _id: new ObjectId(id) };
+    const updateDoc = {
+        $inc: { quantity: parseInt(newQuantity) },
+        $set: { stockStatus: "in-stock" } 
+    };
+
+    const result = await productCollection.updateOne(filter, updateDoc);
     res.send(result);
 });
 
