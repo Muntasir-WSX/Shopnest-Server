@@ -124,6 +124,29 @@ app.delete("/products/:id", verifyToken, verifyAdmin, async (req, res) => {
     res.send(result);
 });
 
+// Admin can see all orders with pagination
+app.get("/admin/orders", verifyToken, verifyAdmin, async (req, res) => {
+    const page = parseInt(req.query.page) || 0;
+    const size = parseInt(req.query.size) || 10;
+    
+    const cursor = orderCollection.find().sort({ orderDate: -1 });
+    const total = await orderCollection.countDocuments();
+    const result = await cursor.skip(page * size).limit(size).toArray();
+    
+    res.send({ result, total });
+});
+
+app.patch("/orders/status-update/:id", verifyToken, verifyAdmin, async (req, res) => {
+    const id = req.params.id;
+    const { status } = req.body;
+    const filter = { _id: new ObjectId(id) };
+    const updateDoc = {
+        $set: { status: status },
+    };
+    const result = await orderCollection.updateOne(filter, updateDoc);
+    res.send(result);
+});
+
 
     // GET Route of testimonials
     app.get("/testimonials", async (req, res) => {
