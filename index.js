@@ -89,25 +89,20 @@ app.get("/users", verifyToken, verifyAdmin, async (req, res) => {
     res.send(result);
 });
 
-// make user moderator-(cant delete first admin)
-app.patch("/users/admin/:id", verifyToken, verifyAdmin, async (req, res) => {
-    const id = req.params.id;
-    const filter = { _id: new ObjectId(id) };
-    const updateDoc = {
-        $set: { 
-          role: "admin" 
-        },
-    };
-    const result = await userCollection.updateOne(filter, updateDoc);
-    res.send(result);
-});
-
 // Admin check so that can't delete himself
 app.patch("/users/admin/:id", verifyToken, verifyAdmin, async (req, res) => {
     const id = req.params.id;
     const requesterEmail = req.decoded.email; 
     const filter = { _id: new ObjectId(id) };
-    const result = await userCollection.updateOne(filter, { $set: { role: "admin" } });
+    const userToUpdate = await userCollection.findOne(filter);
+
+    if (userToUpdate.email === requesterEmail) {
+        return res.status(400).send({ message: "You cannot change your own role" });
+    }
+    const updateDoc = {
+        $set: { role: "admin" },
+    };
+    const result = await userCollection.updateOne(filter, updateDoc);
     res.send(result);
 });
 
