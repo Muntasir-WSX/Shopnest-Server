@@ -68,12 +68,7 @@ app.post('/jwt', async (req, res) => {
     const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' });
     res.send({ token });
 });
-
-
-
-
-    // admin route
-
+ // admin route
 
  // check if admin
    app.get("/users/admin/:email", async (req, res) => {
@@ -150,6 +145,18 @@ app.patch("/admin/products/add-stock/:id", verifyToken, verifyAdmin, async (req,
     const result = await productCollection.updateOne(filter, updateDoc);
     res.send(result);
 });
+
+// post new products
+app.post("/products", verifyToken, verifyAdmin, async (req, res) => {
+    try {
+        const product = req.body;
+        const result = await productCollection.insertOne(product);
+        res.send(result);
+    } catch (error) {
+        res.status(500).send({ message: "Error adding product", error });
+    }
+});
+
 
 // Admin can see all orders with pagination
 app.get("/admin/orders", verifyToken, verifyAdmin, async (req, res) => {
