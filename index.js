@@ -195,6 +195,47 @@ app.delete("/admin/messages/:id", verifyToken, verifyAdmin, async (req, res) => 
     res.send(result);
 });
 
+
+/////////////////////// Dashboard ///////////////////////////
+
+// Admin Stats & Analytics API
+app.get("/admin-stats", verifyToken, verifyAdmin, async (req, res) => {
+    try {
+        const users = await userCollection.countDocuments();
+        const products = await productCollection.countDocuments();
+        const orders = await orderCollection.countDocuments();
+        const revenueResult = await orderCollection.aggregate([
+            { $match: { paidStatus: true } },
+            {
+                $group: {
+                    _id: null,
+                    totalRevenue: { $sum: "$totalAmount" }
+                }
+            }
+        ]).toArray();
+        const revenue = revenueResult.length > 0 ? revenueResult[0].totalRevenue : 0;
+        const orderStats = await orderCollection.aggregate([
+            {
+                $group: {
+                    _id: "$status",
+                    count: { $sum: 1 }
+                }
+            }
+        ]).toArray();
+
+        res.send({
+            users,
+            products,
+            orders,
+            revenue,
+            orderStats
+        });
+    } catch (error) {
+        res.status(500).send({ message: "Error fetching admin stats", error });
+    }
+});
+
+
     // GET Route of testimonials
     app.get("/testimonials", async (req, res) => {
       const cursor = testimonialCollection.find();
