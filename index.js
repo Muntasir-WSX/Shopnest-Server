@@ -152,7 +152,6 @@ app.post("/products", verifyToken, verifyAdmin, async (req, res) => {
     }
 });
 
-
 // Admin can see all orders with pagination
 app.get("/admin/orders", verifyToken, verifyAdmin, async (req, res) => {
     const page = parseInt(req.query.page) || 0;
@@ -176,6 +175,25 @@ app.patch("/orders/status-update/:id", verifyToken, verifyAdmin, async (req, res
     res.send(result);
 });
 
+// get all complain message 
+app.get("/admin/messages", verifyToken, verifyAdmin, async (req, res) => {
+    const page = parseInt(req.query.page) || 0;
+    const size = parseInt(req.query.size) || 10;
+    
+    const cursor = db.collection("messages").find().sort({ _id: -1 }); // নতুন মেসেজ আগে দেখাবে
+    const total = await db.collection("messages").countDocuments();
+    const result = await cursor.skip(page * size).limit(size).toArray();
+    
+    res.send({ result, total });
+});
+
+// complain message delete
+app.delete("/admin/messages/:id", verifyToken, verifyAdmin, async (req, res) => {
+    const id = req.params.id;
+    const query = { _id: new ObjectId(id) };
+    const result = await db.collection("messages").deleteOne(query);
+    res.send(result);
+});
 
     // GET Route of testimonials
     app.get("/testimonials", async (req, res) => {
