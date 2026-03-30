@@ -26,6 +26,7 @@ const jwt = require('jsonwebtoken');
 
 
 
+
 const verifyToken = (req, res, next) => {
     if (!req.headers.authorization) {
         return res.status(401).send({ message: 'unauthorized access' });
@@ -60,40 +61,40 @@ async function run() {
 
 /// ChatBot
 
+
 app.post("/chat/product-info", async (req, res) => {
     const { userMessage, productDetails } = req.body;
 
     try {
-        
         const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-      
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        
+        const model = genAI.getGenerativeModel(
+            { model: "gemini-1.5-flash" }, 
+            { apiVersion: 'v1' }
+        );
 
         const context = productDetails 
             ? `Product: ${productDetails.name}, Price: ${productDetails.price} BDT. Details: ${productDetails.desc}` 
-            : "The user is browsing ShopNest ecommerce.";
+            : "Help the customer on ShopNest.";
 
-        const prompt = `${context}\nUser Question: ${userMessage}\nAnswer as a helpful shop assistant in short.`;
+        const prompt = `${context}\nUser: ${userMessage}\nAssistant:`;
 
         const result = await model.generateContent(prompt);
-        
         const response = await result.response;
         const text = response.text(); 
-        
+
         res.send({ reply: text });
 
     } catch (error) {
-        // এটি আপনাকে টার্মিনালে আসল সমস্যাটি দেখাবে (যেমন: Invalid Key)
-        console.error("--- CHAT ROUTE ERROR ---");
-        console.error(error.message); 
-        
-        res.status(500).send({ 
-            reply: "Server side error!", 
-            error: error.message 
-        });
+        console.error("--- Gemini Error ---", error.message);
+        res.status(500).send({ reply: "Server side error: " + error.message });
     }
 });
 
+
+
+
+/// ChatBot
 
 const verifyAdmin = async (req, res, next) => {
     const email = req.decoded.email;
